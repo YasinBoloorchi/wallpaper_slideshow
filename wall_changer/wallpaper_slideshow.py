@@ -1,3 +1,4 @@
+import shutil
 import os
 from time import sleep
 import cv2
@@ -6,10 +7,12 @@ from PIL import Image
 import re
 import subprocess
 from random import randint
+import sys
+
 
 
 def set_wallpaper(pic_path):
-    os.system(f'wal -i {pic_path}')
+    os.system(f'wal -i {pic_path} 2> /dev/null')
 
 
 def fading(pic_path_1, pic_path_2):
@@ -26,38 +29,44 @@ def fading(pic_path_1, pic_path_2):
         r = (a_R * (alpha/255.0)) + (b_R * (1.0 - (alpha/255.0)))
         output = cv2.merge((b,g,r)) 
 
-        cv2.imwrite("wall_paper_pic.png", output)
-        set_wallpaper('./wall_paper_pic.png')
+        cv2.imwrite("/tmp/new_image/wall_paper_pic.png", output)
+        set_wallpaper('/tmp/new_image/wall_paper_pic.png')
 
 
 def manage_wall_pic(old_path):
     new_path = '/tmp/new_image/'
-    if not os.path.exists(new_path):
-        os.mkdir(new_path)
+    
+    if os.path.exists(new_path):
+        shutil.rmtree(new_path)
+    
+    os.mkdir(new_path)
+    
+    subprocess_cmd = subprocess.Popen("xdpyinfo | grep 'dimensions:'", shell=True, stdout=subprocess.PIPE)
+    subprocess_return = subprocess_cmd.stdout.read().decode('UTF-8').strip()
+
+    resulution = re.findall('\s(\d*)x(\d*)\spixels',subprocess_return)[0]
+
+    pictures_count = 0
 
     for root, dirs, files in os.walk(old_path):
         for file in files:
+            pictures_count += 1
+
             image_path = root+'/'+file
             
             image = Image.open(image_path)
             width, height = image.size
+        
 
-            print('(',width, height,')', '==>', image_path)
-            
-            # TODO: dynamicly find dimension of every monitor with 
-            # xdpyinfo | grep 'dimensions:'
-
-            subprocess_cmd = subprocess.Popen("xdpyinfo | grep 'dimensions:'", shell=True, stdout=subprocess.PIPE)
-            subprocess_return = subprocess_cmd.stdout.read().decode('UTF-8').strip()
-
-            resulution = re.findall('\s(\d*)x(\d*)\spixels',subprocess_return)[0]
-            print('screen resulotion: ',resulution)
-            width  = int(resulution[0])
-            hight = int(resulution[1])
-
+            screen_width  = int(resulution[0])
+            screen_hight = int(resulution[1])
 
             new_image = image.resize((1920, 1080))
             new_image.save(new_path+file)
+            
+            
+            print(f'Pic #{pictures_count}:' , '(',width, height,')', '==>', image_path, end='\r')
+
 
     wall_pics_paths = []
     for root, dirs, files in os.walk(new_path):
@@ -71,16 +80,34 @@ def manage_wall_pic(old_path):
 # fading(pic_path_1, pic_path_2)
 
 
-old_path = input('Enter your pictures directory full path: ')
-time_sleep = int(input("Enter the time to wait between each wallpaper to change: "))
+# old_path = input('Enter your pictures directory full path: ')
+# time_sleep = int(input("Enter the time to wait between each wallpaper to change: "))
 
-wall_pics_paths = manage_wall_pic(old_path)
+# get the arguments that we want (pic path and time interval)
+try:
+    old_path = sys.argv[1]
+except:
+    raise Exception('No pictures directory path has been specified!')
 
+try:
+    time_sleep = int(sys.argv[2])
+except:
+    raise Exception("No time interval has been specified!")
+
+# keep a source file so that we can run this program infinitly
+source_wall_pics_paths = manage_wall_pic(old_path)
+wall_pics_paths = source_wall_pics_paths.copy()
+
+# set the initial wallpaper picture
 current_wallpaper = wall_pics_paths.pop(randint(0,len(wall_pics_paths)-1))
 set_wallpaper(current_wallpaper)
 
-while len(wall_pics_paths) > 0:
-    new_wallpaper = wall_pics_paths.pop(randint(0,len(wall_pics_paths)-1))
-    sleep(time_sleep)
-    fading(current_wallpaper, new_wallpaper)
-    current_wallpaper = new_wallpaper
+# program infinity loop 
+while True:    
+    while len(wall_pics_paths) > 0:
+        new_wallpaper = wall_pics_paths.pop(randint(0,len(wall_pics_paths)-1))
+        sleep(time_sleep)
+        fading(current_wallpaper, new_wallpaper)
+        current_wallpaper = new_wallpaper
+
+    wall_pics_paths = source_wall_pics_paths.copy()
