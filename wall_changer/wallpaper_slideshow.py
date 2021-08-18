@@ -12,14 +12,14 @@ from PIL import Image
 
 
 def set_wallpaper(pic_path):
-    os.system(f'wal -i {pic_path} 2> /dev/null')
+    os.system(f'feh --bg-fill {pic_path} 2> /dev/null')
 
 
 def fading(pic_path_1, pic_path_2):
     for i in range(1,11):
         lion = cv2.imread(pic_path_1,3)
         taj = cv2.imread(pic_path_2,3)
-        alpha = cv2.imread(f'../masks/mask{i}.png',0).astype(np.float32)
+        alpha = cv2.imread(f'/home/hakim/.config/i3/scripts/wallpaper_slideshow/masks/mask{i}.png',0).astype(np.float32)
         
         a_B, a_G, a_R = cv2.split(lion)
         b_B, b_G, b_R = cv2.split(taj)
@@ -30,7 +30,10 @@ def fading(pic_path_1, pic_path_2):
         output = cv2.merge((b,g,r)) 
 
         cv2.imwrite("/tmp/new_image/wall_paper_pic.png", output)
-        set_wallpaper('/tmp/new_image/wall_paper_pic.png')
+        cv2.imwrite(f"/tmp/new_image/wall_paper_pic_{i}.png", output)
+    
+    for i in range(1, 11):
+        set_wallpaper(f'/tmp/new_image/wall_paper_pic_{i}.png')
 
 
 def manage_wall_pic(old_path):
