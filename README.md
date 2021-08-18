@@ -8,4 +8,4 @@ For now you can use it for free or maybe you can help me make it better.
 
 
 
-<video src="/home/hakim/Documents/GitHub Update/wallpaper_slideshow/wallpaper_slideshow.mp4"></video>
+<video src="./wallpaper_slideshow.mp4"></video>
